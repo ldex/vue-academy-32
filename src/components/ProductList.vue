@@ -10,14 +10,18 @@
         </fieldset>
         <ul class="products">
             <li v-for="product in sortedFilteredPaginatedProducts" :key="product.id"
-                :class='{ discontinued: product.discontinued, selected: selectedProduct?.id == product.id }'
+                :class='{ discontinued: product.discontinued }'
                 @click="onSelect(product)"
                 :title="JSON.stringify(product)">
-                <span class="name">{{ product.name }}</span>
-                <span class="description">{{ product.description }}</span>
-                <span class="price">{{ product.price }}</span>
+                <slot :product="product">
+                  {{ product.name }}
+                </slot>
             </li>
         </ul>
+
+        <div class="right">
+          <router-link to="/product/insert">Create new product...</router-link>
+        </div>
 
         <button @click="prevPage" :disabled="pageNumber === 1">
             &lt; Previous
@@ -31,86 +35,31 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import useList from "@/composables/items-list";
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-function onSelect(product) {
-      router.push({ name: "product", params: { id: product.id } });
-    }
-
 const props = defineProps({
-    products: Array,
-    pageSize: {
+      products: {
+        type: Array
+      },
+      pageSize: {
         type: Number,
         required: false,
         default: 5
-    }
-})
+      },
+      title: {
+        type: String,
+        default: "Products"
+      }
+});
 
-let title = 'Products'
-const selectedProduct = ref(null);
-const filterName = ref('');
-const sortName = ref('modifiedDate');
-const sortDir = ref('desc');
-const pageNumber = ref(1);
-
-watch([filterName, sortName, sortDir], () => {
-    pageNumber.value = 1;
-})
-
-const filteredProducts = computed(() => {
-    let filter = new RegExp(filterName.value, 'i')
-    return props.products.filter(el => el.name.match(filter))
-})
-
-const sortedFilteredProducts = computed(() => {
-    let modifier = 1;
-    if (sortDir.value === 'desc') modifier = -1;
-
-    return [...filteredProducts.value].sort((a, b) => {
-        if (sortName.value == 'name') {
-            return a.name.localeCompare(b.name) * modifier
-        }
-        else {
-            if (a[sortName.value] < b[sortName.value]) return -1 * modifier;
-            if (a[sortName.value] > b[sortName.value]) return 1 * modifier;
-            return 0;
-        }
-    })
-})
-
-const sortedFilteredPaginatedProducts = computed(() => {
-    const start = (pageNumber.value - 1) * props.pageSize,
-        end = start + props.pageSize;
-
-    return sortedFilteredProducts.value.slice(start, end);
-})
-
-const pageCount = computed(() => {
-    let l = filteredProducts.value.length,
-        s = props.pageSize;
-    return Math.ceil(l / s);
-})
-
-function sort(s) {
-    //if s == current sort, reverse order
-    if (s === sortName.value) {
-        sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
-    }
-    sortName.value = s;
+function onSelect(product) {
+  router.push({ name: "product", params: { id: product.id } });
 }
 
-function nextPage() {
-    pageNumber.value++;
-    selectedProduct.value = null;
-}
-
-function prevPage() {
-    pageNumber.value--;
-    selectedProduct.value = null;
-}
+const { sort, nextPage, prevPage, filterName, pageNumber, pageCount, sortedFilteredPaginatedItems: sortedFilteredPaginatedProducts } = useList(props.products, props.pageSize, "modifiedDate", "desc")
 </script>
 
 <style lang="css" scoped>

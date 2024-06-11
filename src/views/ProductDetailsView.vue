@@ -16,14 +16,25 @@
                 <p>Fixed price? {{ product.fixedPrice }}</p>
                 <p>Discontinued? {{ product.discontinued }}</p>
                 <p>Modified date: {{ product.modifiedDate }}</p>
+                <p>
+                    <button @click="deleteWithConfirm(product)" v-if="loggedIn">
+                        Delete
+                    </button>
+                </p>
             </div>
         </section>
     </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import ProductService from '@/services/ProductService.js'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useProductStore } from '@/stores/product'
+import { useUserStore } from '@/stores/user'
+
+const router = useRouter()
+const productStore = useProductStore()
+const userStore = useUserStore()
 
 const props = defineProps(
     {
@@ -34,20 +45,24 @@ const props = defineProps(
     }
 )
 
-const product = ref(null);
-const errorMessage = ref(null);
-const isLoading = ref(false);
+function deleteWithConfirm(product) {
+    if (window.confirm('Are you sure ??')) {
+        productStore.deleteProduct(product)
+            .then(
+                () => router.push({ name: 'products' })
+            )
+            .catch(
+                () => router.push({ name: 'error' })
+            )
+    }
+}
 
-isLoading.value = true;
+const product = computed(() => productStore.product);
+const isLoading = computed(() => productStore.isLoading);
+const errorMessage = computed(() => productStore.errorMessage);
+const loggedIn = computed(() => userStore.isLoggedIn);
 
-ProductService.getProduct(props.id)
-    .then(data => {
-        product.value = data
-    })
-    .catch(error => {
-        errorMessage.value = 'There was an error getting the product from server, ' + error;
-    })
-    .finally(() => isLoading.value = false)
+productStore.fetchProduct(props.id)
 </script>
 
 <style lang="scss" scoped></style>

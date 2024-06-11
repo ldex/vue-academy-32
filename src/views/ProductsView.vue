@@ -1,33 +1,38 @@
 <template>
-<section v-if="errorMessage">
-      {{errorMessage}}
-    </section>
-    <section v-else>
-      <div v-if="isLoading">
-        <div class="loader">Loading products...</div>
-      </div>
-      <product-list v-else :products="products" :page-size="5"></product-list>
-    </section>
+  <section v-if="errorMessage">
+    {{ errorMessage }}
+  </section>
+  <section v-else>
+    <div v-if="isLoading">
+      <div class="loader">Loading products...</div>
+    </div>
+    <div v-else>
+      <product-list :products="products" :page-size="5">
+        <template v-slot="slotProps">
+          <span>{{ slotProps.product.name }}</span> <span>({{ slotProps.product.price }}$)</span>
+        </template>
+      </product-list>
+    </div>
+  </section>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, onErrorCaptured } from 'vue'
 import ProductList from '@/components/ProductList.vue';
-import ProductService from '@/services/ProductService.js';
+import { useProductStore } from '@/stores/product';
 
-const products = ref([]);
-const errorMessage = ref(null);
-const isLoading = ref(false);
+const productStore = useProductStore();
 
-isLoading.value = true;
-ProductService.getProducts()
-      .then(data => products.value = data)
-      .catch(error => {
-        errorMessage.value = 'There was an error getting products from server, ' + error;
-      })
-      .finally(() => isLoading.value = false);
+const products = computed(() => productStore.products);
+const isLoading = computed(() => productStore.isLoading);
+const errorMessage = computed(() => productStore.errorMessage);
+
+onErrorCaptured((error) => {
+  console.error('Error in component: ', error.message);
+  return true;
+});
+
+productStore.fetchProducts()
 </script>
 
-<style lang="scss" scoped>
-
-</style>
+<style lang="scss" scoped></style>
